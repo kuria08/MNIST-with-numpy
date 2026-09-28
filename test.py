@@ -34,7 +34,14 @@ def init():
 #activation function
 def sigmoid(x):
     return 1/(1+np.exp(-x))
+def ReLU(x):
+    return np.maximum(0, x)
+def softmax(x):
+    exp_x = np.exp(x - np.max(x, axis=0, keepdims=True))
+    return exp_x / np.sum(exp_x, axis=0, keepdims=True)
 
+def ReLU_derivative(x):
+    return x > 0
 #cost function
 def cost(out_put, labels):
     return (1/len(out_put))*np.sum((out_put-labels)**2)
@@ -42,10 +49,10 @@ def cost(out_put, labels):
 
 def forward_propagetion(w1, b1, w2, b2, x):
     z1 = w1.dot(x) + b1
-    x1 = sigmoid(z1) 
+    x1 = ReLU(z1) 
     z2 = w2.dot(x1) + b2
-    x2 = sigmoid(z2) #output
-    return x1, x2
+    x2 = softmax(z2) #output
+    return z1, x1, z2, x2
 
 #training
 def train(x_train, y_train, epochs, learning_rate):
@@ -55,12 +62,12 @@ def train(x_train, y_train, epochs, learning_rate):
         for i in range(x_train.shape[1]):
             labels = one_hot(y_train[i])
             x = x_train[:,i:i+1]
-            x1, x2 = forward_propagetion(w1, b1, w2, b2, x)
+            z1, x1, z2, x2 = forward_propagetion(w1, b1, w2, b2, x)
 
             count_corr += int(np.argmax(x2) == np.argmax(labels))
 
             delta_x2 = (x2 - labels)
-            delta_x1 = (w2.T.dot(delta_x2))*(x1*(1-x1))
+            delta_x1 = (w2.T.dot(delta_x2))*ReLU_derivative(z1)
 
             w2 = w2 - learning_rate*delta_x2.dot(x1.T)
             b2 = b2 - learning_rate*delta_x2
@@ -85,7 +92,7 @@ def test(w1, b1, w2, b2, x_dev, y_dev):
         x = x_dev[:, idx:idx+1]
         act = y_dev[idx]
 
-        _, x2 = forward_propagetion(w1, b1, w2, b2, x)
+        _,_,_, x2 = forward_propagetion(w1, b1, w2, b2, x)
         pre = np.argmax(x2)
 
         print(f"Predict: {pre}")
