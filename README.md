@@ -13,15 +13,6 @@ A simple handwritten digit recognition project built from scratch using **Python
 * Model saving/loading
 * GUI for drawing digits and making predictions
 
-## Technologies
-
-* Python
-* NumPy
-* Pandas
-* Tkinter
-* Pillow
-* Matplotlib
-
 ## Model
 
 ```text
@@ -36,35 +27,36 @@ ReLU
 Softmax
 ```
 
-Training configuration:
+## Results
 
-```text
-Epochs: 10
-Learning Rate: 0.01
-```
+* **Accuracy: ~96–97%**
+* **Epochs: 10**
+* **Learning rate: 0.01**
+
+## Technologies
+
+* Python
+* NumPy
+* Pandas
+* Tkinter
+* Pillow
+* Matplotlib
 
 ## Run
 
-Install dependencies:
-
 ```bash
 pip install numpy pandas matplotlib pillow
+python main.py
 ```
 
-Put the dataset here:
+Make sure `train.csv` is located at:
 
 ```text
 digit-recognizer/train.csv
 ```
 
-Then run:
-
-```bash
-python main.py
-```
-
-If no saved model exists, the program trains the neural network automatically. After training, you can draw a digit using the GUI and let the model predict it.
+The program automatically trains the model if no saved weights are found. After training, you can draw a digit using the GUI and let the model predict it.
 
 ## Goal
 
-This project was created to understand the fundamentals of **Neural Networks and Backpropagation from scratch**, without using TensorFlow or PyTorch.
+Built to understand **Neural Networks, Forward Propagation, Backpropagation, and Gradient Descent from scratch**, without TensorFlow or PyTorch.
