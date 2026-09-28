@@ -1,5 +1,8 @@
 import numpy as np
 import pandas as pd
+import os
+import tkinter as tk
+from PIL import Image, ImageDraw
 from matplotlib import pyplot as plt
 
 data = np.array(pd.read_csv('digit-recognizer/train.csv'))
@@ -18,7 +21,7 @@ data_train = data[1000:m].T
 y_train = data_train[0]
 x_train = data_train[1:n] / 255.
 
-#chuyen labels 0->9 thanh one hot vector (10x1)
+# labels 0-9 -> (10x1)
 def one_hot(label):
     one_hot = np.zeros((10, 1))
     one_hot[label] = 1
@@ -76,33 +79,79 @@ def train(x_train, y_train, epochs, learning_rate):
             acc = (count_corr / x_train.shape[1])*100
         print(f"Epoch {epoch+1}/{epochs} Accuracy: {acc:.2f}%")
     return w1, w2, b1, b2
-w1, w2, b1, b2 = train(x_train, y_train, epochs=10, learning_rate=0.01)
 
-def test(w1, b1, w2, b2, x_dev, y_dev):
-    while True:
-        inp = input(f"\nType 0 -> {x_dev.shape[1] - 1}, press 'q' for exit): ")
+model_filename = 'model_weights.npz'
+if os.path.exists(model_filename):
+    print("Found existing model! Loading weights...")
+    saved_model = np.load(model_filename)
+    w1 = saved_model['w1']
+    b1 = saved_model['b1']
+    w2 = saved_model['w2']
+    b2 = saved_model['b2']
+    print("Model loaded successfully. Starting GUI...")
+else:
+    print("No saved model found. Training from scratch...")
+    w1, w2, b1, b2 = train(x_train, y_train, epochs=10, learning_rate=0.01)
+    np.savez(model_filename, w1=w1, b1=b1, w2=w2, b2=b2)
+    print(f"Model saved to {model_filename}. Starting GUI...")
+
+
+class DrawingApp:
+    def __init__(self, root, w1, b1, w2, b2):
+        self.root = root
+        self.root.title("Draw a digit (0-9)")
         
-        if inp.lower() == 'q':
-            break
-        idx = int(inp)
-        if not inp.isdigit() or idx < 0 or idx > x_dev.shape[1] - 1:
-            print("Try again!")
-            continue
+        self.w1, self.b1 = w1, b1
+        self.w2, self.b2 = w2, b2
+        
+        self.canvas_width = 280
+        self.canvas_height = 280
+        
+        self.canvas = tk.Canvas(self.root, width=self.canvas_width, height=self.canvas_height, bg='black')
+        self.canvas.pack(pady=10)
+        
+        self.image = Image.new("L", (self.canvas_width, self.canvas_height), color=0)
+        self.draw = ImageDraw.Draw(self.image)
 
-        x = x_dev[:, idx:idx+1]
-        act = y_dev[idx]
+        self.canvas.bind("<B1-Motion>", self.paint)
+        
+        btn_frame = tk.Frame(self.root)
+        btn_frame.pack(pady=5)
+        
+        self.btn_predict = tk.Button(btn_frame, text="Predict", font=('Arial', 12, 'bold'), command=self.predict_digit)
+        self.btn_predict.pack(side=tk.LEFT, padx=10)
+        
+        self.btn_clear = tk.Button(btn_frame, text="Clear", font=('Arial', 12), command=self.clear_canvas)
+        self.btn_clear.pack(side=tk.RIGHT, padx=10)
+        
+        self.lbl_result = tk.Label(self.root, text="Draw a digit and click Predict", font=('Arial', 14))
+        self.lbl_result.pack(pady=10)
 
-        _,_,_, x2 = forward_propagetion(w1, b1, w2, b2, x)
-        pre = np.argmax(x2)
+    def paint(self, event):
+        r = 12
+        x1, y1 = (event.x - r), (event.y - r)
+        x2, y2 = (event.x + r), (event.y + r)
+        
 
-        print(f"Predict: {pre}")
-        print(f"Real   : {act}")
+        self.canvas.create_oval(x1, y1, x2, y2, fill="white", outline="white")
+        self.draw.ellipse([x1, y1, x2, y2], fill=255)
 
-        img_display = x.reshape(28, 28) * 255.0
-        plt.figure(figsize=(4, 4))
-        plt.imshow(img_display, cmap='gray')
-        plt.title(f"Index: {idx} | Prediction: {pre} | Actual: {act}")
-        plt.axis('off')
-        plt.show()
+    def clear_canvas(self):
+        self.canvas.delete("all")
+        self.image = Image.new("L", (self.canvas_width, self.canvas_height), color=0)
+        self.draw = ImageDraw.Draw(self.image)
+        self.lbl_result.config(text="Canvas cleared.")
 
-test(w1, b1, w2, b2, x_dev, y_dev)
+    def predict_digit(self):
+        img_resized = self.image.resize((28, 28), Image.Resampling.LANCZOS)
+        img_array = np.array(img_resized)
+        x_input = img_array.reshape(784, 1) / 255.0
+        _, _, _, x2 = forward_propagetion(self.w1, self.b1, self.w2, self.b2, x_input)
+        prediction = np.argmax(x2)
+        confidence = np.max(x2) * 100
+        self.lbl_result.config(text=f"Prediction: {prediction} (Confidence: {confidence:.2f}%)")
+        print(f"Model predicted: {prediction} | Confidence: {confidence:.2f}%")
+
+root = tk.Tk()
+app = DrawingApp(root, w1, b1, w2, b2)
+root.mainloop()
