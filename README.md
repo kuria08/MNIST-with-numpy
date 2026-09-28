@@ -1,33 +1,25 @@
-# MNIST NumPy & Live Canvas
+# MNIST Classification with NumPy (From Scratch) 
 
 ![Python](https://img.shields.io/badge/Python-3.x-blue.svg)
 ![NumPy](https://img.shields.io/badge/NumPy-Power-blue.svg)
 ![Tkinter](https://img.shields.io/badge/GUI-Tkinter-green.svg)
 
-A lightweight, 2-layer Neural Network built **entirely from scratch** using only Python and NumPy to recognize handwritten digits. It includes a custom Tkinter GUI for real-time drawing and prediction!
-
-##  Quick Start
-
-1. **Install requirements:** 
-   ```bash
-   pip install -r requirements.txt
-   ```
-2. **Setup Data:** Download `train.csv` from Kaggle's Digit Recognizer and place it inside a `digit-recognizer/` folder.
-3. **Run:** 
-   ```bash
-   python main.py
-   ```
-   *(The model trains once, auto-saves weights to `.npz`, and opens the drawing canvas!)*
-
-##  Key Features
-
-* **Zero Frameworks:** No TensorFlow/PyTorch. Pure linear algebra.
-* **Under the Hood:** Explicit Forward/Backpropagation, ReLU, Softmax, and SGD.
-* **Live Drawing GUI:** Draw a digit with your mouse and get instant predictions.
-* **Auto-Save:** Weights are saved locally after the first run for instant loading in future runs.
+A neural network built **entirely from scratch** using only Python and NumPy to recognize handwritten digits. No deep learning frameworks were used, highlighting the raw linear algebra and calculus behind deep learning.
 
 ##  Architecture & Performance
+* **Structure:** `784` (Input) $\rightarrow$ `20` nodes + ReLU (Hidden) $\rightarrow$ `10` nodes + Softmax (Output).
+* **Optimizer:** Stochastic Gradient Descent (SGD) with a Learning Rate of `0.01`.
+* **Accuracy:** Consistently achieves **~96-97% accuracy** on the training set within 10 epochs.
 
-* **Structure:** `784 (Input)` ➔ `20 (ReLU)` ➔ `10 (Softmax)`
-* **Optimizer:** Stochastic Gradient Descent (SGD)
-* **Accuracy:** ~96-97% (in just 10 epochs, LR: 0.01)
+##  Interactive Live Canvas
+The `DrawingApp` class uses **Tkinter** and **Pillow (PIL)** to create a drawing board. 
+When you draw a number and hit *Predict*, the app:
+1. Resizes the drawing to $28 \times 28$.
+2. Flattens it into a $784 \times 1$ matrix.
+3. Feeds it directly into the custom `forward_propagetion()` function to output real-time predictions.
+
+##  Getting Started
+
+1. **Install dependencies:** `pip install numpy pandas matplotlib Pillow`
+2. **Data:** Download `train.csv` from Kaggle's Digit Recognizer and put it in the `digit-recognizer/` folder.
+3. **Run:** Execute `python main.py`. (The model trains on the first run, saves weights to `model_weights.npz`, and then pops up the drawing GUI!).
