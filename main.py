@@ -9,7 +9,8 @@ data = np.array(pd.read_csv('digit-recognizer/train.csv'))
 
 data = np.array(data)
 m, n = data.shape
-np.random.shuffle(data) #tron data
+np.random.seed(42)
+np.random.shuffle(data)
 
 #data for dev
 data_dev = data[0:1000].T
@@ -27,16 +28,23 @@ def one_hot(label):
     one_hot[label] = 1
     return one_hot
 
+# He initialization
 def init():
-    w1 = np.random.randn(20, 784)*0.01
-    b1 = np.zeros((20, 1))
-    w2 = np.random.randn(10, 20)*0.01
-    b2 = np.zeros((10, 1))
-    return w1, b1, w2, b2
+    # 784 -> 512
+    w1 = np.random.randn(512, 784)*np.sqrt(2/784)
+    b1 = np.zeros((512, 1))
+    # 512 -> 256
+    w2 = np.random.randn(256, 512)*np.sqrt(2/512)
+    b2 = np.zeros((256, 1))
+    # 256 -> 128
+    w3 = np.random.randn(128, 256)*np.sqrt(2/256)
+    b3 = np.zeros((128, 1))
+    # 128 -> 10
+    w4 = np.random.randn(10, 128)*np.sqrt(2/128)
+    b4 = np.zeros((10, 1))
+    return w1, b1, w2, b2, w3, b3, w4, b4
 
 #activation function
-def sigmoid(x):
-    return 1/(1+np.exp(-x))
 def ReLU(x):
     return np.maximum(0, x)
 def softmax(x):
@@ -45,40 +53,52 @@ def softmax(x):
 
 def ReLU_derivative(x):
     return x > 0
-#cost function
-def cost(out_put, labels):
-    return (1/len(out_put))*np.sum((out_put-labels)**2)
 
-
-def forward_propagetion(w1, b1, w2, b2, x):
+def forward_propagetion(w1, b1, w2, b2, w3, b3, w4, b4, x):
     z1 = w1.dot(x) + b1
     x1 = ReLU(z1) 
     z2 = w2.dot(x1) + b2
-    x2 = softmax(z2) #output
-    return z1, x1, z2, x2
+    x2 = ReLU(z2)
+    z3 = w3.dot(x2) + b3
+    x3 = ReLU(z3)
+    z4 = w4.dot(x3) + b4
+    x4 = softmax(z4)
+    return z1, x1, z2, x2, z3, x3, z4, x4
 
 #training
 def train(x_train, y_train, epochs, learning_rate):
-    w1, b1, w2, b2 = init()
+    w1, b1, w2, b2, w3, b3, w4, b4 = init()
     for epoch in range(epochs):
         count_corr = 0
         for i in range(x_train.shape[1]):
             labels = one_hot(y_train[i])
             x = x_train[:,i:i+1]
-            z1, x1, z2, x2 = forward_propagetion(w1, b1, w2, b2, x)
+            z1, x1, z2, x2, z3, x3, z4, x4 = forward_propagetion(w1, b1, w2, b2, w3, b3, w4, b4, x)
 
-            count_corr += int(np.argmax(x2) == np.argmax(labels))
+            count_corr += int(np.argmax(x4) == np.argmax(labels))
 
-            delta_x2 = (x2 - labels)
-            delta_x1 = (w2.T.dot(delta_x2))*ReLU_derivative(z1)
+            delta_x4 = x4 - labels
+            delta_x3 = w4.T.dot(delta_x4)*ReLU_derivative(z3)
+            delta_x2 = w3.T.dot(delta_x3)*ReLU_derivative(z2)
+            delta_x1 = w2.T.dot(delta_x2)*ReLU_derivative(z1)
 
-            w2 = w2 - learning_rate*delta_x2.dot(x1.T)
-            b2 = b2 - learning_rate*delta_x2
-            w1 = w1 - learning_rate*delta_x1.dot(x.T)
-            b1 = b1 - learning_rate*delta_x1
+            w4 = w4 - learning_rate * delta_x4.dot(x3.T)
+            b4 = b4 - learning_rate * delta_x4
+            w3 = w3 - learning_rate * delta_x3.dot(x2.T)
+            b3 = b3 - learning_rate * delta_x3
+            w2 = w2 - learning_rate * delta_x2.dot(x1.T)
+            b2 = b2 - learning_rate * delta_x2
+            w1 = w1 - learning_rate * delta_x1.dot(x.T)
+            b1 = b1 - learning_rate * delta_x1
+
             acc = (count_corr / x_train.shape[1])*100
         print(f"Epoch {epoch+1}/{epochs} Accuracy: {acc:.2f}%")
-    return w1, w2, b1, b2
+    return w1, b1, w2, b2, w3, b3, w4, b4 
+
+def get_accuracy(x, y, w1, b1, w2, b2, w3, b3, w4, b4):
+    _, _, _, _, _, _, _, output = forward_propagetion(w1, b1, w2, b2, w3, b3, w4, b4, x)
+    predictions = np.argmax(output, axis=0)
+    return np.mean(predictions == y) * 100
 
 model_filename = 'model_weights.npz'
 if os.path.exists(model_filename):
@@ -88,21 +108,32 @@ if os.path.exists(model_filename):
     b1 = saved_model['b1']
     w2 = saved_model['w2']
     b2 = saved_model['b2']
-    print("Model loaded successfully. Starting GUI...")
+    w3 = saved_model['w3']
+    b3 = saved_model['b3']
+    w4 = saved_model['w4']
+    b4 = saved_model['b4']
+    print("Model loaded successfully.")
 else:
     print("No saved model found. Training from scratch...")
-    w1, w2, b1, b2 = train(x_train, y_train, epochs=10, learning_rate=0.01)
-    np.savez(model_filename, w1=w1, b1=b1, w2=w2, b2=b2)
-    print(f"Model saved to {model_filename}. Starting GUI...")
+    w1, b1, w2, b2, w3, b3, w4, b4 = train(x_train, y_train, epochs=10, learning_rate=0.001)
+    np.savez(model_filename, w1=w1, b1=b1, w2=w2, b2=b2, w3=w3, b3=b3, w4=w4, b4=b4)
+    print(f"Model saved to {model_filename}.")
 
+dev_accuracy = get_accuracy(
+    x_dev, y_dev,
+    w1, b1, w2, b2, w3, b3, w4, b4
+    )
+print(f"Validation Accuracy: {dev_accuracy:.2f}%")
 
 class DrawingApp:
-    def __init__(self, root, w1, b1, w2, b2):
+    def __init__(self, root, w1, b1, w2, b2, w3, b3, w4, b4):
         self.root = root
         self.root.title("Draw a digit (0-9)")
         
         self.w1, self.b1 = w1, b1
         self.w2, self.b2 = w2, b2
+        self.w3, self.b3 = w3, b3
+        self.w4, self.b4 = w4, b4
         
         self.canvas_width = 280
         self.canvas_height = 280
@@ -146,12 +177,12 @@ class DrawingApp:
         img_resized = self.image.resize((28, 28), Image.Resampling.LANCZOS)
         img_array = np.array(img_resized)
         x_input = img_array.reshape(784, 1) / 255.0
-        _, _, _, x2 = forward_propagetion(self.w1, self.b1, self.w2, self.b2, x_input)
-        prediction = np.argmax(x2)
-        confidence = np.max(x2) * 100
+        _, _, _, _, _, _, _, x4 = forward_propagetion(self.w1, self.b1, self.w2, self.b2, self.w3, self.b3, self.w4, self.b4, x_input)
+        prediction = np.argmax(x4)
+        confidence = np.max(x4) * 100
         self.lbl_result.config(text=f"Prediction: {prediction} (Confidence: {confidence:.2f}%)")
         print(f"Model predicted: {prediction} | Confidence: {confidence:.2f}%")
 
 root = tk.Tk()
-app = DrawingApp(root, w1, b1, w2, b2)
+app = DrawingApp(root, w1, b1, w2, b2, w3, b3, w4, b4)
 root.mainloop()
