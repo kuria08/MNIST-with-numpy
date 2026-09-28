@@ -1,25 +1,70 @@
-# MNIST Classification with NumPy (From Scratch) 
+# MNIST Digit Recognition with NumPy
 
-![Python](https://img.shields.io/badge/Python-3.x-blue.svg)
-![NumPy](https://img.shields.io/badge/NumPy-Power-blue.svg)
-![Tkinter](https://img.shields.io/badge/GUI-Tkinter-green.svg)
+A simple handwritten digit recognition project built from scratch using **Python and NumPy**.
 
-A neural network built **entirely from scratch** using only Python and NumPy to recognize handwritten digits. No deep learning frameworks were used, highlighting the raw linear algebra and calculus behind deep learning.
+## Features
 
-##  Architecture & Performance
-* **Structure:** `784` (Input) $\rightarrow$ `20` nodes + ReLU (Hidden) $\rightarrow$ `10` nodes + Softmax (Output).
-* **Optimizer:** Stochastic Gradient Descent (SGD) with a Learning Rate of `0.01`.
-* **Accuracy:** Consistently achieves **~96-97% accuracy** on the training set within 10 epochs.
+* Neural Network: `784 → 20 → 10`
+* ReLU activation
+* Softmax output
+* Backpropagation
+* Gradient Descent
+* MNIST data preprocessing
+* Model saving/loading
+* GUI for drawing digits and making predictions
 
-##  Interactive Live Canvas
-The `DrawingApp` class uses **Tkinter** and **Pillow (PIL)** to create a drawing board. 
-When you draw a number and hit *Predict*, the app:
-1. Resizes the drawing to $28 \times 28$.
-2. Flattens it into a $784 \times 1$ matrix.
-3. Feeds it directly into the custom `forward_propagetion()` function to output real-time predictions.
+## Technologies
 
-##  Getting Started
+* Python
+* NumPy
+* Pandas
+* Tkinter
+* Pillow
+* Matplotlib
 
-1. **Install dependencies:** `pip install numpy pandas matplotlib Pillow`
-2. **Data:** Download `train.csv` from Kaggle's Digit Recognizer and put it in the `digit-recognizer/` folder.
-3. **Run:** Execute `python main.py`. (The model trains on the first run, saves weights to `model_weights.npz`, and then pops up the drawing GUI!).
+## Model
+
+```text
+784 Input
+   ↓
+20 Hidden Neurons
+   ↓
+ReLU
+   ↓
+10 Output Neurons
+   ↓
+Softmax
+```
+
+Training configuration:
+
+```text
+Epochs: 10
+Learning Rate: 0.01
+```
+
+## Run
+
+Install dependencies:
+
+```bash
+pip install numpy pandas matplotlib pillow
+```
+
+Put the dataset here:
+
+```text
+digit-recognizer/train.csv
+```
+
+Then run:
+
+```bash
+python main.py
+```
+
+If no saved model exists, the program trains the neural network automatically. After training, you can draw a digit using the GUI and let the model predict it.
+
+## Goal
+
+This project was created to understand the fundamentals of **Neural Networks and Backpropagation from scratch**, without using TensorFlow or PyTorch.
