@@ -128,21 +128,25 @@ print(f"Validation Accuracy: {dev_accuracy:.2f}%")
 class DrawingApp:
     def __init__(self, root, w1, b1, w2, b2, w3, b3, w4, b4):
         self.root = root
-        self.root.title("Draw a digit (0-9)")
+        self.root.title("Draw a digit (28x28 Soft Brush)")
         
         self.w1, self.b1 = w1, b1
         self.w2, self.b2 = w2, b2
         self.w3, self.b3 = w3, b3
         self.w4, self.b4 = w4, b4
         
-        self.canvas_width = 280
-        self.canvas_height = 280
+        # Kích thước chuẩn MNIST
+        self.img_size = 28
+        self.scale = 10  # Hiển thị phóng to 10 lần (280x280)
+        
+        self.canvas_width = self.img_size * self.scale
+        self.canvas_height = self.img_size * self.scale
         
         self.canvas = tk.Canvas(self.root, width=self.canvas_width, height=self.canvas_height, bg='black')
         self.canvas.pack(pady=10)
         
-        self.image = Image.new("L", (self.canvas_width, self.canvas_height), color=0)
-        self.draw = ImageDraw.Draw(self.image)
+        # Mảng numpy lưu giá trị độ sáng 28x28 kiểu float (0.0 -> 1.0)
+        self.grid = np.zeros((self.img_size, self.img_size), dtype=np.float32)
 
         self.canvas.bind("<B1-Motion>", self.paint)
         
@@ -159,30 +163,55 @@ class DrawingApp:
         self.lbl_result.pack(pady=10)
 
     def paint(self, event):
-        r = 12
-        x1, y1 = (event.x - r), (event.y - r)
-        x2, y2 = (event.x + r), (event.y + r)
+        # Tọa độ tâm nét vẽ trên lưới 28x28
+        cx = event.x / self.scale
+        cy = event.y / self.scale
         
+        # Bán kính cọ vẽ (tính bằng pixel 28x28)
+        brush_radius = 1.8 
+        
+        # Duyệt qua vùng pixel xung quanh tâm nét vẽ
+        min_x = max(0, int(cx - brush_radius - 1))
+        max_x = min(self.img_size, int(cx + brush_radius + 2))
+        min_y = max(0, int(cy - brush_radius - 1))
+        max_y = min(self.img_size, int(cy + brush_radius + 2))
 
-        self.canvas.create_oval(x1, y1, x2, y2, fill="white", outline="white")
-        self.draw.ellipse([x1, y1, x2, y2], fill=255)
+        for x in range(min_x, max_x):
+            for y in range(min_y, max_y):
+                # Tính khoảng cách từ pixel tới tâm nét vẽ
+                dist = np.sqrt((x + 0.5 - cx)**2 + (y + 0.5 - cy)**2)
+                
+                if dist < brush_radius:
+                    # Nét vẽ mờ: Càng gần tâm càng đậm (1.0), ra mép càng mờ (về 0.0)
+                    intensity = np.exp(- (dist**2) / (2 * (0.8**2)))
+                    
+                    # Cộng dồn độ sáng (tối đa là 1.0)
+                    self.grid[y, x] = min(1.0, self.grid[y, x] + intensity * 0.4)
+                    
+                    # Cập nhật màu hiển thị trên Canvas
+                    val_int = int(self.grid[y, x] * 255)
+                    color = f"#{val_int:02x}{val_int:02x}{val_int:02x}"
+                    
+                    x1, y1 = x * self.scale, y * self.scale
+                    x2, y2 = x1 + self.scale, y1 + self.scale
+                    self.canvas.create_rectangle(x1, y1, x2, y2, fill=color, outline=color)
 
     def clear_canvas(self):
         self.canvas.delete("all")
-        self.image = Image.new("L", (self.canvas_width, self.canvas_height), color=0)
-        self.draw = ImageDraw.Draw(self.image)
+        self.grid = np.zeros((self.img_size, self.img_size), dtype=np.float32)
         self.lbl_result.config(text="Canvas cleared.")
 
     def predict_digit(self):
-        img_resized = self.image.resize((28, 28), Image.Resampling.LANCZOS)
-        img_array = np.array(img_resized)
-        x_input = img_array.reshape(784, 1) / 255.0
-        _, _, _, _, _, _, _, x4 = forward_propagetion(self.w1, self.b1, self.w2, self.b2, self.w3, self.b3, self.w4, self.b4, x_input)
+        # Lấy trực tiếp mảng 28x28
+        x_input = self.grid.reshape(784, 1)
+        
+        _, _, _, _, _, _, _, x4 = forward_propagetion(
+            self.w1, self.b1, self.w2, self.b2, self.w3, self.b3, self.w4, self.b4, x_input
+        )
         prediction = np.argmax(x4)
         confidence = np.max(x4) * 100
         self.lbl_result.config(text=f"Prediction: {prediction} (Confidence: {confidence:.2f}%)")
         print(f"Model predicted: {prediction} | Confidence: {confidence:.2f}%")
-
 root = tk.Tk()
 app = DrawingApp(root, w1, b1, w2, b2, w3, b3, w4, b4)
 root.mainloop()
